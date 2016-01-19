@@ -81,6 +81,7 @@ def play(path):
     player.queue(song)
 
     markers = load(path)
+    delete = False
 
     try:
         screen = init_curses()
@@ -89,12 +90,20 @@ def play(path):
         while running:
             ch = screen.getch()
             if (ch < 0): pass
+            elif delete:
+                delete = False
+                if chr(ch).isupper():
+                    key = chr(ch).lower()
+                    if key in markers:
+                        del markers[key]
             elif ch == ord(' '):
                 player.pause() if player.playing else player.play()
             elif ch == curses.KEY_BACKSPACE:
                 player.seek(0)
             elif ch == 27:  # esc
                 running = False
+            elif ch == curses.KEY_DC:
+                delete = not delete
             elif ch == curses.KEY_LEFT:
                 player.seek(max(0, player.time - 1))
             elif ch == curses.KEY_DOWN:
@@ -112,6 +121,9 @@ def play(path):
                 # allow exit on 'q' if not bound
                 running = False
 
+            if delete: title = "delete "
+            else: title = "playing" if player.playing else "paused "
+            screen.addstr(0, 0, title)
             draw_progress(screen, 1,
                           str(datetime.timedelta(seconds=int(player.time))),
                           str(datetime.timedelta(seconds=int(end))),
@@ -131,7 +143,8 @@ if __name__ == "__main__":
         print("Play an audio file and allow adding persistent markers for "
               "quick jumping. Seek with arrow keys, use space bar to toggle "
               "playing, and esc to exit. Add/change marks with S-<letter>, "
-              "and jump to mark with <letter>.")
+              "and jump to mark with <letter>. To delete a mark, press DEL "
+              "followed by S-<letter>.")
         print("usage: {} <audio file>".format(sys.argv[0]), file=sys.stderr)
         sys.exit(1)
     play(sys.argv[1])
